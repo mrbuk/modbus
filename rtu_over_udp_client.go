@@ -66,6 +66,12 @@ func (mb *rtuUDPTransporter) Send(aduRequest []byte) (aduResponse []byte, err er
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
+	defer func() {
+		if err != nil {
+			mb.close()
+		}
+	}()
+
 	// Check ADU request length
 	if len(aduRequest) < 2 {
 		err = ErrADURequestLength(len(aduRequest))

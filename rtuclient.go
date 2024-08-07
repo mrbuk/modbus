@@ -259,10 +259,17 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
+	defer func() {
+		if err != nil {
+			mb.close()
+		}
+	}()
+
 	// Make sure port is connected
 	if err = mb.connect(); err != nil {
 		return
 	}
+
 	// Start the timer to close when idle
 	mb.lastActivity = time.Now()
 	mb.startCloseTimer()

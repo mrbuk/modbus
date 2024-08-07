@@ -177,6 +177,12 @@ func (mb *tcpTransporter) Send(aduRequest []byte) (aduResponse []byte, err error
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
+	defer func() {
+		if err != nil {
+			mb.close()
+		}
+	}()
+
 	var data [tcpMaxLength]byte
 	recoveryDeadline := time.Now().Add(mb.IdleTimeout)
 
@@ -189,14 +195,14 @@ func (mb *tcpTransporter) Send(aduRequest []byte) (aduResponse []byte, err error
 		// Set timer to close when idle
 		mb.lastActivity = time.Now()
 		mb.startCloseTimer()
+
 		// Set write and read timeout
-		var timeout time.Time
 		if mb.Timeout > 0 {
-			timeout = mb.lastActivity.Add(mb.Timeout)
+			if err = mb.conn.SetDeadline(mb.lastActivity.Add(mb.Timeout)); err != nil {
+				return
+			}
 		}
-		if err = mb.conn.SetDeadline(timeout); err != nil {
-			return
-		}
+
 		// Send data
 		mb.logf("modbus: send % x", aduRequest)
 		if _, err = mb.conn.Write(aduRequest); err != nil {

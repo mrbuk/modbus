@@ -45,20 +45,26 @@ func (mb *asciiTCPTransporter) Send(aduRequest []byte) (aduResponse []byte, err 
 	mb.mu.Lock()
 	defer mb.mu.Unlock()
 
+	defer func() {
+		if err != nil {
+			mb.close()
+		}
+	}()
+
 	// Make sure port is connected
 	if err = mb.connect(); err != nil {
 		return
 	}
+
 	// Start the timer to close when idle
 	mb.lastActivity = time.Now()
 	mb.startCloseTimer()
+
 	// Set write and read timeout
-	var timeout time.Time
 	if mb.Timeout > 0 {
-		timeout = mb.lastActivity.Add(mb.Timeout)
-	}
-	if err = mb.conn.SetDeadline(timeout); err != nil {
-		return
+		if err = mb.conn.SetDeadline(mb.lastActivity.Add(mb.Timeout)); err != nil {
+			return
+		}
 	}
 
 	// Send the request
