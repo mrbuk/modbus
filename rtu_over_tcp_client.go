@@ -5,6 +5,7 @@
 package modbus
 
 import (
+	"fmt"
 	"io"
 	"time"
 )
@@ -49,38 +50,43 @@ func (mb *rtuTCPTransporter) Send(aduRequest []byte) (aduResponse []byte, err er
 
 	// Establish a new connection if not connected
 	if err = mb.connect(); err != nil {
+		fmt.Println("!! connect", err)
 		return
 	}
+
 	// Set timer to close when idle
 	mb.lastActivity = time.Now()
 	mb.startCloseTimer()
+
 	// Set write and read timeout
-	var timeout time.Time
 	if mb.Timeout > 0 {
-		timeout = mb.lastActivity.Add(mb.Timeout)
-	}
-	if err = mb.conn.SetDeadline(timeout); err != nil {
-		return
+		if err = mb.conn.SetDeadline(mb.lastActivity.Add(mb.Timeout)); err != nil {
+			fmt.Println("!! conn.SetDeadline", mb.lastActivity, time.Since(mb.lastActivity), err)
+			return
+		}
 	}
 
 	// Send the request
 	mb.logf("modbus: send % x\n", aduRequest)
 	if _, err = mb.conn.Write(aduRequest); err != nil {
+		fmt.Println("!! conn.Write", mb.lastActivity, time.Since(mb.lastActivity), err)
 		return
 	}
+
 	function := aduRequest[1]
 	functionFail := aduRequest[1] & 0x80
 	bytesToRead := calculateResponseLength(aduRequest)
 
-	var n int
-	var n1 int
+	var n, n1 int
 	var data [rtuMaxSize]byte
 	// We first read the minimum length and then read either the full package
 	// or the error package, depending on the error status (byte 2 of the response)
 	n, err = io.ReadAtLeast(mb.conn, data[:], rtuMinSize)
 	if err != nil {
+		fmt.Println("!! io.ReadAtLeast", mb.lastActivity, time.Since(mb.lastActivity), err)
 		return
 	}
+
 	// if the function is correct
 	if data[1] == function {
 		// we read the rest of the bytes
@@ -99,8 +105,10 @@ func (mb *rtuTCPTransporter) Send(aduRequest []byte) (aduResponse []byte, err er
 	}
 
 	if err != nil {
+		fmt.Println("!! io.ReadFull", mb.lastActivity, time.Since(mb.lastActivity), err)
 		return
 	}
+
 	aduResponse = data[:n]
 	mb.logf("modbus: recv % x\n", aduResponse)
 	return

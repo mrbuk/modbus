@@ -349,6 +349,8 @@ func (mb *tcpTransporter) Connect() error {
 
 func (mb *tcpTransporter) connect() error {
 	if mb.conn == nil {
+		fmt.Println("!! connect()", time.Now())
+
 		dialer := net.Dialer{Timeout: mb.Timeout}
 		conn, err := dialer.Dial("tcp", mb.Address)
 		if err != nil {
