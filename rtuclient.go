@@ -268,7 +268,7 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	mb.lastActivity = time.Now()
 	mb.startCloseTimer()
 
-	time.Sleep(time.Duration(3.5 * float64(mb.charDuration())))
+	time.Sleep(mb.charDuration(3.5))
 
 	// Send the request
 	mb.logf("modbus: send % x\n", aduRequest)
@@ -287,8 +287,8 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 }
 
 // charDuration returns time needed for a character to be transmitted.
-func (mb *rtuSerialTransporter) charDuration() time.Duration {
-	return time.Duration(float64((mb.DataBits+3)/mb.BaudRate)) * time.Second
+func (mb *rtuSerialTransporter) charDuration(chars float64) time.Duration {
+	return time.Duration(chars*float64(mb.DataBits+3)/float64(mb.BaudRate)) * time.Second
 }
 
 // calculateDelay roughly calculates time needed for the next frame.
@@ -297,11 +297,11 @@ func (mb *rtuSerialTransporter) calculateDelay(chars int) time.Duration {
 	var characterDelay, frameDelay time.Duration
 
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
-		characterDelay = mb.charDuration() + time.Duration(750)*time.Microsecond
+		characterDelay = mb.charDuration(1) + time.Duration(750)*time.Microsecond
 		frameDelay = time.Duration(1750) * time.Microsecond
 	} else {
-		characterDelay = mb.charDuration() + time.Duration(1.5*float64(mb.charDuration()))
-		frameDelay = time.Duration(3.5 * float64(mb.charDuration()))
+		characterDelay = mb.charDuration(2.5 * float64(chars))
+		frameDelay = mb.charDuration(3.5)
 	}
 	return characterDelay*time.Duration(chars) + frameDelay
 }
