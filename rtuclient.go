@@ -297,7 +297,7 @@ func (mb *rtuSerialTransporter) charBits() int {
 
 // charDuration returns time needed for a character to be transmitted.
 func (mb *rtuSerialTransporter) charsDuration(chars float64) time.Duration {
-	return time.Duration(chars*float64(mb.charBits())/float64(mb.BaudRate)) * time.Second
+	return time.Duration(chars*mb.charBits) * time.Second / mb.BaudRate
 }
 
 // frameDelay returns the minimum required delay between frames.
