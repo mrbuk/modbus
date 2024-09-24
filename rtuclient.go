@@ -268,42 +268,47 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	mb.lastActivity = time.Now()
 	mb.startCloseTimer()
 
-	time.Sleep(mb.charDuration(3.5))
+	time.Sleep(mb.frameDelay())
 
 	// Send the request
 	mb.logf("modbus: send % x\n", aduRequest)
 	if _, err = mb.port.Write(aduRequest); err != nil {
 		return
 	}
-	// function := aduRequest[1]
-	// functionFail := aduRequest[1] & 0x80
+
 	bytesToRead := calculateResponseLength(aduRequest)
-	time.Sleep(mb.calculateDelay(len(aduRequest) + bytesToRead))
+	time.Sleep(mb.charsDuration(float64(len(aduRequest)+bytesToRead)) + mb.frameDelay())
 
 	data, err := readIncrementally(aduRequest[0], aduRequest[1], mb.port, time.Now().Add(mb.Config.Timeout))
 	mb.logf("modbus: recv % x\n", data[:])
-	aduResponse = data
-	return
+
+	mb.lastActivity = time.Now()
+
+	return data, err
+}
+
+// charBits returns the number of bits per character.
+func (mb *rtuSerialTransporter) charBits() int {
+	b := 1 + mb.DataBits + mb.StopBits
+	if mb.Parity != "N" {
+		b++
+	}
+	return b
 }
 
 // charDuration returns time needed for a character to be transmitted.
-func (mb *rtuSerialTransporter) charDuration(chars float64) time.Duration {
-	return time.Duration(chars*float64(mb.DataBits+3)/float64(mb.BaudRate)) * time.Second
+func (mb *rtuSerialTransporter) charsDuration(chars float64) time.Duration {
+	return time.Duration(chars*float64(mb.charBits())/float64(mb.BaudRate)) * time.Second
 }
 
-// calculateDelay roughly calculates time needed for the next frame.
+// frameDelay returns the minimum required delay between frames.
 // See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
-func (mb *rtuSerialTransporter) calculateDelay(chars int) time.Duration {
-	var characterDelay, frameDelay time.Duration
-
+func (mb *rtuSerialTransporter) frameDelay() time.Duration {
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
-		characterDelay = mb.charDuration(1) + time.Duration(750)*time.Microsecond
-		frameDelay = time.Duration(1750) * time.Microsecond
-	} else {
-		characterDelay = mb.charDuration(2.5 * float64(chars))
-		frameDelay = mb.charDuration(3.5)
+		return time.Duration(1750) * time.Microsecond
 	}
-	return characterDelay*time.Duration(chars) + frameDelay
+
+	return mb.charsDuration(3.5)
 }
 
 func calculateResponseLength(adu []byte) int {
