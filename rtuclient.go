@@ -289,11 +289,12 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 
 // charBits returns the number of bits per character.
 func (mb *rtuSerialTransporter) charBits() int {
-	b := 1 + mb.DataBits + mb.StopBits
+	var parityBits int
 	if mb.Parity != "N" {
-		b++
+		parityBits++
 	}
-	return b
+
+	return 1 + mb.DataBits + parityBits + mb.StopBits
 }
 
 // charDuration returns time needed for a character to be transmitted.
