@@ -278,7 +278,7 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	// function := aduRequest[1]
 	// functionFail := aduRequest[1] & 0x80
 	bytesToRead := calculateResponseLength(aduRequest)
-	time.Sleep(mb.charsDuration(float64(len(aduRequest)+bytesToRead)) + mb.frameDelay())
+	time.Sleep(mb.frameDelay() + mb.charsDuration(float64(len(aduRequest)+bytesToRead)))
 
 	data, err := readIncrementally(aduRequest[0], aduRequest[1], mb.port, time.Now().Add(mb.Config.Timeout))
 	mb.logf("modbus: recv % x\n", data[:])
