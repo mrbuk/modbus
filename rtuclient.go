@@ -290,7 +290,6 @@ func (mb *rtuSerialTransporter) charBits() int {
 	if mb.Parity != "N" {
 		parityBits++
 	}
-
 	return 1 + mb.DataBits + parityBits + mb.StopBits
 }
 
@@ -305,7 +304,6 @@ func (mb *rtuSerialTransporter) frameDelay() time.Duration {
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
 		return time.Duration(1750) * time.Microsecond
 	}
-
 	return mb.charsDuration(3.5)
 }
 
