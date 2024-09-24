@@ -305,7 +305,7 @@ func (mb *rtuSerialTransporter) charsDuration(chars float64) time.Duration {
 func (mb *rtuSerialTransporter) frameDelay() time.Duration {
 	var frameDelay time.Duration // us
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
-		frameDelay = time.Duration(1750) * time.Microsecond
+		frameDelay = 1750 * time.Microsecond
 	} else {
 		frameDelay = mb.charsDuration(3.5)
 	}
