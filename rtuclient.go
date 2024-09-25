@@ -264,11 +264,18 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	if err = mb.connect(); err != nil {
 		return
 	}
+
+	// wait for frame delay to elapse
+	if d := time.Until(mb.lastActivity.Add(mb.frameDelay())); d > 0 {
+		time.Sleep(d)
+	}
+
 	// Start the timer to close when idle
 	mb.lastActivity = time.Now()
 	mb.startCloseTimer()
 
-	time.Sleep(mb.frameDelay())
+	// update activity timer after read to append frame delay before next write
+	defer func() { mb.lastActivity = time.Now() }()
 
 	// Send the request
 	mb.logf("modbus: send % x\n", aduRequest)
