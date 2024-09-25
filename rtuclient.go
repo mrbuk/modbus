@@ -282,7 +282,7 @@ func (mb *rtuSerialTransporter) calculateDelay(chars int) time.Duration {
 	var characterDelay, frameDelay int // us
 
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
-		characterDelay = 10000000/mb.BaudRate + 750 // 1 character + 750ms delay
+		characterDelay = 10000000/mb.BaudRate + 750 // 1 character + 750us delay
 		frameDelay = 1750
 	} else {
 		characterDelay = 25000000 / mb.BaudRate // 1 + 1.5 characters delay
