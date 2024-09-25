@@ -264,9 +264,18 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	if err = mb.connect(); err != nil {
 		return
 	}
+
+	// wait for frame delay to elapse
+	if d := time.Until(mb.lastActivity.Add(mb.frameDelay())); d > 0 {
+		time.Sleep(d)
+	}
+
 	// Start the timer to close when idle
 	mb.lastActivity = time.Now()
 	mb.startCloseTimer()
+
+	// update activity timer after read to append frame delay before next write
+	defer func() { mb.lastActivity = time.Now() }()
 
 	// Send the request
 	mb.logf("modbus: send % x\n", aduRequest)
@@ -284,19 +293,28 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	return
 }
 
+// frameDelay roughly calculates the time needed between two frames.
+// See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
+func (mb *rtuSerialTransporter) frameDelay() time.Duration {
+	var frameDelay int // us
+	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
+		frameDelay = 1750
+	} else {
+		frameDelay = 35000000 / mb.BaudRate
+	}
+	return time.Duration(frameDelay) * time.Microsecond
+}
+
 // calculateDelay roughly calculates time needed for the next frame.
 // See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
 func (mb *rtuSerialTransporter) calculateDelay(chars int) time.Duration {
-	var characterDelay, frameDelay int // us
-
+	var characterDelay int // us
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
-		characterDelay = 10000000/mb.BaudRate + 750 // 1 character + 750ms delay
-		frameDelay = 1750
+		characterDelay = 750
 	} else {
-		characterDelay = 25000000 / mb.BaudRate // 1 + 1.5 characters delay
-		frameDelay = 35000000 / mb.BaudRate
+		characterDelay = 15000000 / mb.BaudRate
 	}
-	return time.Duration(characterDelay*chars+frameDelay) * time.Microsecond
+	return time.Duration((1000000/mb.BaudRate+characterDelay)*chars)*time.Microsecond + mb.frameDelay()
 }
 
 func calculateResponseLength(adu []byte) int {
