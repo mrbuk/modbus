@@ -301,7 +301,6 @@ func (mb *rtuSerialTransporter) frameDelay() time.Duration {
 // See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
 func (mb *rtuSerialTransporter) calculateDelay(chars int) time.Duration {
 	var characterDelay int // us
-
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
 		characterDelay = 750
 	} else {
