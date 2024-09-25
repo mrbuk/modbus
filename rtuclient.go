@@ -293,8 +293,11 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	return
 }
 
-// frameDelay roughly calculates the time needed between two frames.
+// Delay calculation exploits the assumption that a character consists of 10 bits.
+// Precise calculation would require acknowledging the number of start/stop/data/parity bits per character.
 // See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
+
+// frameDelay roughly calculates the time needed between two frames.
 func (mb *rtuSerialTransporter) frameDelay() time.Duration {
 	var frameDelay int // us
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
@@ -306,7 +309,6 @@ func (mb *rtuSerialTransporter) frameDelay() time.Duration {
 }
 
 // calculateDelay roughly calculates time needed for the next frame.
-// See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
 func (mb *rtuSerialTransporter) calculateDelay(chars int) time.Duration {
 	var characterDelay int // us
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
