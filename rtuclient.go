@@ -285,6 +285,8 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	return
 }
 
+// frameDelay roughly calculates the time needed between two frames.
+// See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
 func (mb *rtuSerialTransporter) frameDelay() time.Duration {
 	var frameDelay int // us
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
