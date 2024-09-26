@@ -290,6 +290,7 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	data, err := readIncrementally(aduRequest[0], aduRequest[1], mb.port, time.Now().Add(mb.Config.Timeout))
 	mb.logf("modbus: recv % x\n", data[:])
 	aduResponse = data
+	time.Sleep(mb.frameDelay())
 	return
 }
 
