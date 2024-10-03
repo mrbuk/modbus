@@ -159,7 +159,7 @@ func (e *InvalidLengthError) Error() string {
 }
 
 // readIncrementally reads incrementally
-func readIncrementally(slaveID, functionCode byte, r io.Reader) ([]byte, error) {
+func readIncrementally(slaveID, functionCode byte, r io.Reader, delay time.Duration) ([]byte, error) {
 	if r == nil {
 		return nil, fmt.Errorf("reader is nil")
 	}
@@ -170,10 +170,20 @@ func readIncrementally(slaveID, functionCode byte, r io.Reader) ([]byte, error) 
 	state := stateSlaveID
 	var length, toRead byte
 	var n, crcCount int
+	var deadline time.Time
 
 	for {
+		if !deadline.IsZero() && time.Now().After(deadline) { // Possible that serialport may spew data
+			return nil, fmt.Errorf("failed to read from serial port within deadline")
+		}
+
 		if _, err := io.ReadAtLeast(r, buf, 1); err != nil {
 			return nil, err
+		}
+
+		if delay > 0 {
+			// after first byte, remaining bytes MUST be read within delay
+			deadline = time.Now().Add(delay)
 		}
 
 		switch state {
@@ -263,7 +273,8 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	}
 
 	// Wait for previous frame delay to elapse
-	time.Sleep(time.Until(mb.lastActivity.Add(mb.frameDelay())))
+	time.Sleep(time.Until(mb.lastActivity.Add(2 * mb.frameDelay())))
+	defer func() { mb.lastActivity = time.Now() }()
 
 	// Start the timer to close when idle
 	mb.lastActivity = time.Now()
@@ -274,13 +285,13 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	if _, err = mb.port.Write(aduRequest); err != nil {
 		return
 	}
-	// function := aduRequest[1]
-	// functionFail := aduRequest[1] & 0x80
-	bytesToRead := calculateResponseLength(aduRequest)
-	time.Sleep(mb.frameDelay() + time.Duration((len(aduRequest)+bytesToRead))*mb.charDuration())
 
-	data, err := readIncrementally(aduRequest[0], aduRequest[1], mb.port)
-	mb.lastActivity = time.Now().Add(mb.frameDelay())
+	// Wait for request to be sent
+	time.Sleep(mb.frameDelay() + time.Duration(len(aduRequest))*mb.charDuration())
+
+	// Response is allowed to take character duration plus 1.5 characters gap (2.5 = 5/2 integer division)
+	responseDuration := time.Duration(calculateResponseLength(aduRequest)) * mb.charDuration() * 5 / 2
+	data, err := readIncrementally(aduRequest[0], aduRequest[1], mb.port, responseDuration)
 	mb.logf("modbus: recv % x\n", data[:])
 	aduResponse = data
 	return
