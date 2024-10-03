@@ -287,7 +287,7 @@ func (mb *rtuSerialTransporter) Send(aduRequest []byte) (aduResponse []byte, err
 	}
 
 	// Wait for request to be sent
-	time.Sleep(mb.frameDelay() + time.Duration(len(aduRequest))*mb.charDuration())
+	time.Sleep(time.Duration(len(aduRequest))*mb.charDuration() + mb.frameDelay())
 
 	// Response is allowed to take character duration plus 1.5 characters gap (2.5 = 5/2 integer division)
 	responseDuration := time.Duration(calculateResponseLength(aduRequest)) * mb.charDuration() * 5 / 2
