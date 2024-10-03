@@ -305,13 +305,13 @@ func (mb *rtuSerialTransporter) charDuration() time.Duration {
 // frameDelay returns the required minimum delay at the start and and the end of each frame.
 // See MODBUS over Serial Line - Specification and Implementation Guide (page 13).
 func (mb *rtuSerialTransporter) frameDelay() time.Duration {
-	var t int // µs
+	var fd int // µs
 	if mb.BaudRate <= 0 || mb.BaudRate > 19200 {
-		t = 1750
+		fd = 1750
 	} else {
-		t = 38500000 / mb.BaudRate
+		fd = 38500000 / mb.BaudRate
 	}
-	return time.Duration(t) * time.Microsecond
+	return time.Duration(fd) * time.Microsecond
 }
 
 func calculateResponseLength(adu []byte) int {
