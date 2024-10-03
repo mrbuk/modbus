@@ -181,7 +181,7 @@ func readIncrementally(slaveID, functionCode byte, r io.Reader, delay time.Durat
 			return nil, err
 		}
 
-		// after first byte, remaining bytes MUST be read within delay
+		// after response has started remaining bytes MUST be read within maximum message duration
 		if delay > 0 {
 			deadline = time.Now().Add(delay)
 		}
